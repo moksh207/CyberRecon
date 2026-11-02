@@ -1,112 +1,90 @@
-# 🔒 CyberRecon v5.0 — Complete Security Suite
+# 🔒 CyberRecon v5.0 — Cybersecurity Vulnerability & Reconnaissance Suite
 
-Full integration of Desktop App + Web App with:
-- OWASP Top 10 (2025) Vulnerability Scanner
-- Working Nmap Port Scanner
-- HTTP/DNS/WHOIS/IP Reconnaissance
-- HTML Report Export
+An integrated security auditing and reconnaissance suite offering both a modern **Streamlit Web Application** and a **Desktop Tkinter GUI**, powered by a decoupled core scanning engine.
 
 ---
 
-## 📁 Folder Structure
+## 🌟 Key Features
 
-```
+- **🔍 Full Reconnaissance:** HTTP header inspection, server fingerprinting, DNS resolution (A records + PTR), and WHOIS domain queries.
+- **🌐 IP Intelligence & Geolocation:** Country, city, ISP, ASN, and proxy/hosting risk score.
+- **🗺️ Integrated Nmap Port Scanner:** Native Nmap engine support (TCP Connect, SYN Scan, UDP Scan, Service & Version detection, Fast Scan).
+- **🛡️ OWASP Top 10 (2025) Vulnerability Scanner:** Automated auditing for A01 through A10 (Access Control, Cryptographic Failures, Injection, Insecure Design, Misconfigurations, Outdated Components, Auth Failures, Software Integrity, Logging & Monitoring, SSRF).
+- **📊 Formatted HTML & Text Reports:** One-click download of timestamped, styled security assessment reports.
+
+---
+
+## 📁 Project Structure
+
+```text
 CyberRecon_Final/
-├── cyber_recon_desktop.py   ← Desktop GUI (tkinter) — run directly
-├── app.py                   ← Web backend (Flask)
-├── requirements.txt         ← Python dependencies
-├── README.md
+├── web_app.py           ← Streamlit Web Application (recommended for Cloud & CV)
+├── Scanner.py           ← Desktop Tkinter Application
+├── scanner_engine.py    ← Decoupled core scanning & vulnerability engine
+├── packages.txt         ← Linux system dependencies (nmap, whois) for Streamlit Cloud
+├── requirements.txt     ← Python package dependencies
+├── README.md            ← Project documentation
+├── app.py               ← Flask web alternative
 └── templates/
-    └── index.html           ← Web frontend
+    └── index.html       ← Flask frontend template
 ```
 
 ---
 
-## 🖥️ Option 1 — Desktop App (cyber_recon_desktop.py)
+## 🚀 Running the Streamlit Web Application (Option 1 - Recommended)
 
-### Install
+### 1. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### Run
+### 2. Launch the Streamlit App
 ```bash
-python cyber_recon_desktop.py
+streamlit run web_app.py
 ```
-
-### Desktop Features
-- 🔍 Scanner tab — HTTP recon, DNS, WHOIS, IP intel
-- 🛡️ OWASP 2025 tab — standalone vuln scanner with live output
-- 🗺️ Network/Nmap tab — dedicated Nmap scanner (TCP/SYN/UDP/Version)
-- 🌐 Intelligence tab — IP geolocation with info cards
-- 📊 Reports tab — preview & export HTML report
-- Checkboxes to include/exclude OWASP scan and Nmap from main scan
+The browser will automatically open at `http://localhost:8501`.
 
 ---
 
-## 🌐 Option 2 — Web App (app.py + templates/index.html)
+## 🖥️ Running the Desktop Tkinter Application (Option 2)
 
-### Install
 ```bash
-pip install -r requirements.txt
+python Scanner.py
 ```
-
-### Run
-```bash
-python app.py
-```
-
-### Open
-```
-http://localhost:5000
-```
-
-Sign up → Log in → Scan
-
-### Deploy Free Online
-**Render.com** (recommended):
-1. Push to GitHub
-2. render.com → New Web Service → connect repo
-3. Build: `pip install -r requirements.txt`
-4. Start: `gunicorn app:app`
-5. Add env var: `SECRET_KEY=your-random-secret`
 
 ---
 
-## 🗺️ Nmap Setup (Required for port scanning)
+## ☁️ Deployment on Streamlit Community Cloud
 
-| OS      | Command                              |
-|---------|--------------------------------------|
-| Windows | Download: https://nmap.org/download.html |
-| Linux   | `sudo apt install nmap`              |
-| macOS   | `brew install nmap`                  |
+This project is configured for one-click deployment on **Streamlit Community Cloud**:
 
-Then: `pip install python-nmap`
+1. **Push this repository to GitHub.**
+2. Go to [share.streamlit.io](https://share.streamlit.io) and log in.
+3. Click **New app** and select your repository and branch.
+4. Set the **Main file path** to:
+   ```text
+   web_app.py
+   ```
+5. Click **Deploy**.
 
-> **Note:** SYN scan (-sS) requires admin/root. Use TCP Connect for normal users.
-
----
-
-## ⬡ OWASP Top 10 (2025) Coverage
-
-| ID       | Category                          | Tests |
-|----------|-----------------------------------|-------|
-| A01:2025 | Broken Access Control             | Admin panels, dir listing, CSRF, IDOR, verb tampering |
-| A02:2025 | Cryptographic Failures            | SSL/TLS, ciphers, HTTPS redirect, cookies |
-| A03:2025 | Injection                         | SQLi, XSS, SSTI, Command, NoSQL |
-| A04:2025 | Insecure Design                   | Stack traces, debug mode, rate limiting |
-| A05:2025 | Security Misconfiguration         | Headers, CORS, TRACE, sensitive files |
-| A06:2025 | Vulnerable & Outdated Components  | CVE signatures, jQuery/CMS versions |
-| A07:2025 | Auth & ID Failures                | Default creds, session cookies, tokens |
-| A08:2025 | Software Integrity Failures       | SRI, deserialization, CI/CD configs |
-| A09:2025 | Logging & Monitoring Failures     | security.txt, log files, WAF detection |
-| A10:2025 | SSRF                              | SSRF, Open Redirect, Path Traversal, XXE |
+### How Nmap is configured in Streamlit Cloud:
+- Streamlit Cloud runs on Debian-based Linux containers.
+- The `packages.txt` file in the root directory instructs the build system to automatically install:
+  - `nmap`
+  - `whois`
+- Because cloud containers run in unprivileged user mode without `root`/`sudo`, use **TCP Connect** (`-sT`) for network port scans in the cloud.
 
 ---
 
-## ⚠️ Legal Disclaimer
+## 🗺️ Nmap Setup for Local Testing
 
-**Authorized use only.** Only scan systems you own or have explicit written permission to test.
-Unauthorized scanning is illegal. Users assume full responsibility.
+| Operating System | Installation Instructions |
+| :--- | :--- |
+| **Windows** | Download and install from [https://nmap.org/download.html](https://nmap.org/download.html) and ensure `nmap.exe` is added to your system `PATH`. |
+| **Linux (Debian/Ubuntu)** | `sudo apt update && sudo apt install nmap whois` |
+| **macOS** | `brew install nmap whois` |
 
-© 2025 KAVI & MOKSH — Cyber Security Students
+---
+
+## ⚖️ Legal & Ethical Disclaimer
+This project is developed for authorized security research, vulnerability auditing, and educational demonstrations only. Always obtain explicit written authorization from system owners before performing reconnaissance or vulnerability assessments.

@@ -16,6 +16,7 @@ Includes:
 """
 
 import os
+import sys
 import re
 import ssl
 import json
@@ -25,6 +26,16 @@ import ipaddress
 import threading
 import concurrent.futures
 from urllib.parse import urlparse, quote
+
+# Ensure safe UTF-8 output on Windows consoles
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 import requests
 import urllib3
@@ -1232,3 +1243,58 @@ class ScanEngine:
         self.lg("[DONE]", "Scan complete!", C['green'])
         return results
 
+
+
+if __name__ == "__main__":
+    import sys
+    import argparse
+    import shutil
+
+    print("=" * 65)
+    print("🔒 CyberRecon v5.0 — Core Scanning Engine")
+    print("=" * 65)
+
+    print("[*] Diagnostic Checks:")
+    nmap_path = shutil.which("nmap") or shutil.which("nmap.exe")
+    print(f"  • python-nmap library : {'AVAILABLE' if NMAP_OK else 'MISSING'}")
+    print(f"  • nmap binary on PATH : {nmap_path if nmap_path else 'NOT FOUND'}")
+    if NMAP_OK and nmap_path:
+        try:
+            nm = python_nmap.PortScanner()
+            print(f"  • nmap engine version : {nm.nmap_version()}")
+        except Exception as e:
+            print(f"  • nmap engine error   : {e}")
+    print(f"  • python-whois library: {'AVAILABLE' if WHOIS_OK else 'MISSING'}")
+    print("=" * 65)
+
+    parser = argparse.ArgumentParser(description="CyberRecon CLI Engine")
+    parser.add_argument("target", nargs="?", default="scanme.nmap.org", help="Target domain, URL, or IP to scan")
+    parser.add_argument("--ports", default="80,443", help="Port range or list (default: 80,443)")
+    parser.add_argument("--scan-type", default="TCP Connect", choices=["TCP Connect", "SYN Scan", "UDP Scan", "Service Version", "Fast Scan"])
+    parser.add_argument("--skip-vuln", action="store_true", help="Skip OWASP vulnerability scan")
+    parser.add_argument("--skip-nmap", action="store_true", help="Skip Nmap port scan")
+    args = parser.parse_args()
+
+    print(f"[*] Initiating test scan on: {args.target}")
+    rm = ReportManager()
+
+    def cli_logger(prefix, text, color):
+        print(f"{prefix} {text}".strip())
+
+    engine = ScanEngine(cli_logger, rm)
+    try:
+        res = engine.scan(
+            target=args.target,
+            run_vuln=not args.skip_vuln,
+            run_nmap=not args.skip_nmap,
+            nmap_ports=args.ports,
+            nmap_type=args.scan_type
+        )
+        print("\n" + "=" * 65)
+        print("✅ Scan Completed Successfully!")
+        print(f"Target: {res['domain']} ({res['url']})")
+        print(f"Resolved IPs: {res['dns']}")
+        print(f"Vulnerabilities Identified: {len(res.get('owasp', []))}")
+        print("=" * 65)
+    except Exception as err:
+        print(f"❌ Scan failed: {err}")
