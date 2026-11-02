@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>CyberRecon v5 — OWASP 2025 + Nmap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#020510;--bg2:#060c1e;--panel:#0a1228;--border:#1a2a50;
+  --cyan:#00e5ff;--green:#00ff9d;--red:#ff2d5e;--orange:#ff8c00;
+  --yellow:#ffd700;--purple:#c800ff;--text:#d0dff0;--muted:#4a6080;
+  --mono:'Share Tech Mono',monospace;--hd:'Orbitron',sans-serif;--ui:'Rajdhani',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--ui);overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(0,229,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.025) 1px,transparent 1px);
+  background-size:44px 44px;animation:gridDrift 25s linear infinite}
+@keyframes gridDrift{to{background-position:44px 44px}}
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px)}
+/* AUTH */
+#auth-screen{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 40%,#07122b 0%,#020510 65%)}
+.auth-wrap{width:min(430px,94vw);animation:fadeUp .55s ease both;position:relative;z-index:1}
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px)}}
+.auth-logo{text-align:center;margin-bottom:28px}
+.auth-logo h1{font-family:var(--hd);font-size:clamp(1.4rem,5vw,2rem);font-weight:900;letter-spacing:5px;
+  color:var(--cyan);text-shadow:0 0 28px rgba(0,229,255,.65),0 0 60px rgba(0,229,255,.25)}
+.auth-logo p{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:3px;margin-top:5px}
+.auth-card{background:linear-gradient(140deg,rgba(10,18,40,.97),rgba(4,8,20,.99));
+  border:1px solid var(--border);border-radius:14px;padding:34px;position:relative;overflow:hidden}
+.auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent);animation:scanPulse 3s ease-in-out infinite}
+@keyframes scanPulse{0%,100%{opacity:.35}50%{opacity:1}}
+.tab-row{display:flex;gap:4px;background:var(--bg);border-radius:8px;padding:4px;margin-bottom:26px}
+.tab-btn{flex:1;padding:9px;font-family:var(--ui);font-size:.9rem;font-weight:700;letter-spacing:1px;
+  background:none;border:none;border-radius:6px;color:var(--muted);cursor:pointer;transition:.2s}
+.tab-btn.active{background:linear-gradient(135deg,var(--cyan),#007fe0);color:#000}
+.fg{margin-bottom:16px}
+.fg label{display:block;font-family:var(--mono);font-size:.67rem;letter-spacing:2px;color:var(--cyan);margin-bottom:7px}
+.fg input{width:100%;padding:11px 15px;background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  font-family:var(--mono);font-size:.88rem;color:var(--text);outline:none;transition:.2s}
+.fg input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.09)}
+.auth-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--cyan),#006fcc);border:none;
+  border-radius:8px;font-family:var(--hd);font-size:.82rem;font-weight:700;letter-spacing:2px;
+  color:#000;cursor:pointer;transition:.3s;margin-top:6px}
+.auth-btn:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(0,229,255,.28)}
+.auth-err{background:rgba(255,45,94,.09);border:1px solid rgba(255,45,94,.4);border-radius:6px;
+  padding:9px 13px;font-family:var(--mono);font-size:.77rem;color:var(--red);margin-bottom:13px;display:none}
+.auth-err.show{display:block}
+/* APP */
+#app{display:none;flex-direction:column;min-height:100vh;position:relative;z-index:1}
+#app.visible{display:flex}
+.navbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:16px;
+  padding:0 22px;height:58px;background:rgba(2,5,16,.97);border-bottom:1px solid var(--border);backdrop-filter:blur(18px)}
+.nav-logo{font-family:var(--hd);font-size:.95rem;font-weight:900;letter-spacing:3px;
+  color:var(--cyan);text-shadow:0 0 18px rgba(0,229,255,.4);white-space:nowrap}
+.nav-tabs{display:flex;gap:3px;flex:1;overflow-x:auto;scrollbar-width:none}
+.nav-tabs::-webkit-scrollbar{display:none}
+.ntab{padding:7px 15px;font-family:var(--ui);font-size:.82rem;font-weight:600;letter-spacing:1px;
+  color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:.18s}
+.ntab:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.ntab.active{color:var(--cyan);background:rgba(0,229,255,.07);border-bottom:2px solid var(--cyan)}
+.nav-right{display:flex;align-items:center;gap:10px;margin-left:auto;white-space:nowrap}
+.nav-user{font-family:var(--mono);font-size:.78rem;color:var(--green)}
+.nav-scans{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.logout-btn{padding:5px 12px;background:rgba(255,45,94,.09);border:1px solid rgba(255,45,94,.3);
+  border-radius:6px;font-family:var(--mono);font-size:.72rem;color:var(--red);cursor:pointer;transition:.18s}
+.logout-btn:hover{background:rgba(255,45,94,.18)}
+.page{display:none;padding:26px;max-width:1340px;margin:0 auto;width:100%}
+.page.active{display:block}
+.sec-title{font-family:var(--hd);font-size:1rem;font-weight:700;letter-spacing:3px;
+  color:var(--text);margin-bottom:18px;display:flex;align-items:center;gap:12px}
+.sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+/* SCAN CARD */
+.scan-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  padding:26px;margin-bottom:22px;position:relative;overflow:hidden}
+.scan-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent)}
+.scan-row{display:flex;gap:10px;flex-wrap:wrap}
+.scan-input{flex:1;min-width:220px;padding:13px 18px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:8px;font-family:var(--mono);font-size:.92rem;color:var(--text);outline:none;transition:.22s}
+.scan-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.08)}
+.port-input{width:120px;padding:13px 14px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:8px;font-family:var(--mono);font-size:.85rem;color:var(--text);outline:none;transition:.22s}
+.port-input:focus{border-color:var(--cyan)}
+.go-btn{padding:13px 28px;background:linear-gradient(135deg,var(--green),#00a860);border:none;
+  border-radius:8px;font-family:var(--hd);font-size:.82rem;font-weight:700;letter-spacing:2px;
+  color:#000;cursor:pointer;transition:.28s;white-space:nowrap}
+.go-btn:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,255,157,.28)}
+.go-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.prog-wrap{margin-top:14px;height:3px;background:var(--bg);border-radius:2px;overflow:hidden;display:none}
+.prog-wrap.on{display:block}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));animation:progAnim 2.2s ease-in-out infinite}
+@keyframes progAnim{0%{width:0%;margin-left:0}50%{width:55%;margin-left:22%}100%{width:0%;margin-left:100%}}
+.status-log{margin-top:10px;font-family:var(--mono);font-size:.75rem;color:var(--cyan);min-height:18px;opacity:.85}
+.disclaimer{background:rgba(255,215,0,.04);border:1px solid rgba(255,215,0,.18);border-radius:8px;
+  padding:13px 18px;font-family:var(--mono);font-size:.72rem;color:#996600;line-height:1.7;margin-bottom:18px}
+.disclaimer b{color:var(--yellow)}
+/* RESULT PANELS */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px}
+@media(max-width:750px){.grid2{grid-template-columns:1fr}}
+.rpanel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.rpanel-hdr{padding:10px 16px;background:rgba(0,229,255,.055);border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-size:.7rem;letter-spacing:2px;color:var(--cyan)}
+.rpanel-body{padding:14px 16px;font-family:var(--mono);font-size:.75rem;color:var(--muted);
+  line-height:1.75;max-height:210px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+.rpanel-body::-webkit-scrollbar{width:4px}
+.rpanel-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+/* NMAP PANEL */
+.nmap-panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;margin-bottom:22px;overflow:hidden}
+.nmap-hdr{padding:14px 20px;background:rgba(0,255,157,.05);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.nmap-hdr-title{font-family:var(--hd);font-size:.85rem;letter-spacing:2px;color:var(--green)}
+.nmap-badge{padding:3px 10px;border-radius:4px;font-family:var(--mono);font-size:.65rem;font-weight:700}
+.nmap-badge.ok{background:rgba(0,255,157,.12);border:1px solid rgba(0,255,157,.3);color:var(--green)}
+.nmap-badge.err{background:rgba(255,45,94,.12);border:1px solid rgba(255,45,94,.3);color:var(--red)}
+.nmap-badge.warn{background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);color:var(--yellow)}
+.nmap-tabs{display:flex;gap:6px;padding:12px 20px;border-bottom:1px solid var(--border)}
+.nmap-tab{padding:5px 14px;background:none;border:1px solid var(--border);border-radius:6px;
+  font-family:var(--mono);font-size:.7rem;color:var(--muted);cursor:pointer;transition:.18s}
+.nmap-tab:hover{color:var(--text)}
+.nmap-tab.active{border-color:var(--green);color:var(--green);background:rgba(0,255,157,.07)}
+.nmap-body{padding:16px 20px}
+.nmap-raw{font-family:var(--mono);font-size:.75rem;color:var(--muted);line-height:1.8;
+  max-height:320px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+.nmap-raw::-webkit-scrollbar{width:4px}
+.nmap-raw::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.port-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.75rem}
+.port-table th{padding:8px 12px;background:rgba(0,229,255,.06);color:var(--cyan);
+  text-align:left;font-size:.67rem;letter-spacing:1.5px;border-bottom:1px solid var(--border)}
+.port-table td{padding:8px 12px;border-bottom:1px solid rgba(26,42,80,.6);color:var(--muted);vertical-align:top}
+.port-table tr:hover td{background:rgba(255,255,255,.02)}
+.p-open{color:var(--green);font-weight:700}
+.p-closed{color:var(--red)}
+.p-filtered{color:var(--yellow)}
+.p-num{color:var(--cyan);font-weight:700}
+/* OWASP MAP */
+.owasp-map{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:22px}
+.owasp-map-title{font-family:var(--hd);font-size:.85rem;letter-spacing:3px;color:var(--cyan);margin-bottom:16px}
+.owasp-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+@media(max-width:680px){.owasp-grid{grid-template-columns:repeat(2,1fr)}}
+.ocell{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 8px;text-align:center;transition:.22s}
+.ocell.vuln{border-color:rgba(255,45,94,.45);background:rgba(255,45,94,.06)}
+.ocell.clean{border-color:rgba(0,255,157,.3);background:rgba(0,255,157,.05)}
+.ocell-id{font-family:var(--hd);font-size:.65rem;font-weight:700;color:var(--cyan);letter-spacing:1px}
+.ocell-name{font-family:var(--mono);font-size:.55rem;color:var(--muted);margin-top:3px;line-height:1.3}
+.ocell-count{font-family:var(--hd);font-size:1.1rem;font-weight:900;margin-top:6px}
+.ocell.vuln .ocell-count{color:var(--red)}
+.ocell.clean .ocell-count{color:var(--green)}
+/* VULN */
+.vuln-summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.vbadge{padding:7px 18px;border-radius:8px;font-family:var(--hd);font-size:.76rem;font-weight:700;letter-spacing:1px;display:flex;align-items:center;gap:7px}
+.vbadge.c{background:rgba(255,45,94,.14);border:1px solid rgba(255,45,94,.4);color:var(--red)}
+.vbadge.h{background:rgba(255,140,0,.11);border:1px solid rgba(255,140,0,.38);color:var(--orange)}
+.vbadge.m{background:rgba(255,215,0,.09);border:1px solid rgba(255,215,0,.3);color:var(--yellow)}
+.vbadge.l{background:rgba(0,255,157,.07);border:1px solid rgba(0,255,157,.28);color:var(--green)}
+.vbadge.p{background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.2);color:var(--cyan)}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.fbtn{padding:5px 14px;background:var(--panel);border:1px solid var(--border);border-radius:18px;
+  font-family:var(--mono);font-size:.68rem;color:var(--muted);cursor:pointer;transition:.18s}
+.fbtn:hover,.fbtn.active{border-color:var(--cyan);color:var(--cyan)}
+.vlist{display:flex;flex-direction:column;gap:7px}
+.vitem{display:flex;gap:12px;align-items:flex-start;padding:13px 16px;
+  background:var(--panel);border:1px solid var(--border);border-left:3px solid;
+  border-radius:0 8px 8px 0;animation:slIn .28s ease both}
+@keyframes slIn{from{opacity:0;transform:translateX(-8px)}}
+.vitem.CRITICAL{border-left-color:var(--red)}.vitem.HIGH{border-left-color:var(--orange)}
+.vitem.MEDIUM{border-left-color:var(--yellow)}.vitem.LOW{border-left-color:var(--green)}
+.vitem.PASS{border-left-color:var(--cyan);opacity:.48}
+.vtag{font-family:var(--mono);font-size:.62rem;font-weight:700;letter-spacing:.8px;
+  padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.vtag.CRITICAL{background:rgba(255,45,94,.18);color:var(--red)}
+.vtag.HIGH{background:rgba(255,140,0,.18);color:var(--orange)}
+.vtag.MEDIUM{background:rgba(255,215,0,.14);color:var(--yellow)}
+.vtag.LOW{background:rgba(0,255,157,.11);color:var(--green)}
+.vtag.PASS{background:rgba(0,229,255,.09);color:var(--cyan)}
+.otag{font-family:var(--mono);font-size:.58rem;padding:2px 6px;border-radius:4px;
+  background:rgba(200,0,255,.1);border:1px solid rgba(200,0,255,.28);color:var(--purple);white-space:nowrap;flex-shrink:0}
+.vtitle{font-family:var(--ui);font-size:.87rem;font-weight:600;color:var(--text)}
+.vdetail{font-family:var(--mono);font-size:.7rem;color:var(--muted);margin-top:3px}
+.empty{text-align:center;padding:55px 20px;color:var(--muted)}
+.empty-ico{font-size:2.8rem;opacity:.35;margin-bottom:11px}
+.empty-txt{font-family:var(--mono);font-size:.82rem}
+/* ABOUT */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.fcard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;transition:.22s}
+.fcard:hover{border-color:rgba(0,229,255,.28);transform:translateY(-2px)}
+.fcard-badge{display:inline-block;padding:2px 8px;background:rgba(200,0,255,.09);border:1px solid rgba(200,0,255,.28);
+  border-radius:4px;font-size:.62rem;color:var(--purple);font-family:var(--mono);margin-bottom:6px}
+.fcard-ico{font-size:1.7rem;margin-bottom:8px}
+.fcard-name{font-family:var(--ui);font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:5px}
+.fcard-desc{font-family:var(--mono);font-size:.72rem;color:var(--muted);line-height:1.6}
+/* DEV */
+.dev-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:34px;text-align:center;max-width:520px;margin:0 auto}
+.dev-name{font-family:var(--hd);font-size:1.3rem;font-weight:900;letter-spacing:3px;color:var(--text)}
+.dev-role{font-family:var(--mono);font-size:.75rem;color:var(--cyan);margin-top:5px;letter-spacing:2px}
+.dev-div{height:1px;background:var(--border);margin:22px 0}
+.dev-contact{font-family:var(--mono);font-size:.82rem;color:var(--muted);line-height:2.2}
+.dev-contact a{color:var(--cyan);text-decoration:none}
+.dev-contact a:hover{color:var(--green)}
+.act-row{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+.act-btn{padding:12px 26px;border:none;border-radius:8px;font-family:var(--hd);font-size:.78rem;font-weight:700;letter-spacing:2px;cursor:pointer;transition:.28s;color:#000}
+.act-btn:hover{transform:translateY(-1px)}
+@media(max-width:580px){.page{padding:14px}.nav-scans{display:none}}
+</style>
+</head>
+<body>
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="auth-wrap">
+    <div class="auth-logo"><h1>⬡ CYBERRECON</h1><p>OWASP 2025 · NMAP · VULNERABILITY SCANNER</p></div>
+    <div class="auth-card">
+      <div class="tab-row">
+        <button class="tab-btn active" onclick="switchTab('login')">LOGIN</button>
+        <button class="tab-btn" onclick="switchTab('signup')">SIGN UP</button>
+      </div>
+      <div id="login-form">
+        <div id="login-err" class="auth-err"></div>
+        <div class="fg"><label>USERNAME</label><input type="text" id="login-user" placeholder="your_username" autocomplete="username"/></div>
+        <div class="fg"><label>PASSWORD</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/></div>
+        <button class="auth-btn" onclick="doLogin()">ACCESS SYSTEM</button>
+      </div>
+      <div id="signup-form" style="display:none">
+        <div id="signup-err" class="auth-err"></div>
+        <div class="fg"><label>USERNAME</label><input type="text" id="signup-user" placeholder="choose_username" autocomplete="username"/></div>
+        <div class="fg"><label>EMAIL</label><input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email"/></div>
+        <div class="fg"><label>PASSWORD</label><input type="password" id="signup-pass" placeholder="min 6 characters" autocomplete="new-password"/></div>
+        <button class="auth-btn" onclick="doSignup()">CREATE ACCOUNT</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- APP -->
+<div id="app">
+  <nav class="navbar">
+    <span class="nav-logo">⬡ CYBERRECON</span>
+    <div class="nav-tabs">
+      <button class="ntab active" onclick="showPage('scanner',this)">🔍 Scanner</button>
+      <button class="ntab" onclick="showPage('about',this)">⚙️ Capabilities</button>
+      <button class="ntab" onclick="showPage('developer',this)">👨‍💻 Developer</button>
+    </div>
+    <div class="nav-right">
+      <span class="nav-user" id="nav-user">—</span>
+      <span class="nav-scans" id="nav-scans"></span>
+      <button class="logout-btn" onclick="doLogout()">LOGOUT</button>
+    </div>
+  </nav>
+  <!-- SCANNER -->
+  <div id="page-scanner" class="page active">
+    <div class="disclaimer"><b>⚠️ AUTHORIZED USE ONLY:</b> Only scan systems you own or have explicit written permission to test. Unauthorized scanning is illegal.</div>
+    <div class="sec-title">🎯 TARGET</div>
+    <div class="scan-card">
+      <div class="scan-row">
+        <input class="scan-input" id="target-input" type="text" placeholder="https://example.com  or  192.168.1.1  or  example.com" onkeydown="if(event.key==='Enter')startScan()"/>
+        <input class="port-input" id="port-input" type="text" value="1-1024" title="Nmap port range (e.g. 1-1024, 80,443, 1-65535)"/>
+        <button class="go-btn" id="go-btn" onclick="startScan()">▶ SCAN</button>
+      </div>
+      <div style="margin-top:8px;font-family:var(--mono);font-size:.67rem;color:var(--muted)">Port range for Nmap (e.g. 1-1024 · 80,443,8080 · 1-65535). Wider range = longer scan time.</div>
+      <div class="prog-wrap" id="prog"><div class="prog-fill"></div></div>
+      <div class="status-log" id="status-log"></div>
+    </div>
+    <div id="empty-state" class="empty">
+      <div class="empty-ico">🛰️</div>
+      <div class="empty-txt">Enter a target and press SCAN.<br/>Recon + OWASP 2025 + Nmap results appear here.</div>
+    </div>
+    <div id="results-area" style="display:none">
+      <div class="sec-title">📡 RECONNAISSANCE</div>
+      <div class="grid2">
+        <div class="rpanel"><div class="rpanel-hdr">🌐 HTTP HEADERS</div><div class="rpanel-body" id="r-http">—</div></div>
+        <div class="rpanel"><div class="rpanel-hdr">🔗 DNS</div><div class="rpanel-body" id="r-dns">—</div></div>
+        <div class="rpanel"><div class="rpanel-hdr">📍 IP INTELLIGENCE</div><div class="rpanel-body" id="r-ip">—</div></div>
+        <div class="rpanel"><div class="rpanel-hdr">🕐 SCAN INFO</div><div class="rpanel-body" id="r-meta">—</div></div>
+      </div>
+      <div class="sec-title">🔌 NMAP PORT SCAN</div>
+      <div class="nmap-panel">
+        <div class="nmap-hdr">
+          <span class="nmap-hdr-title">PORT SCANNER</span>
+          <span class="nmap-badge" id="nmap-badge">—</span>
+          <span id="nmap-summ" style="font-family:var(--mono);font-size:.7rem;color:var(--muted)"></span>
+        </div>
+        <div class="nmap-tabs">
+          <button class="nmap-tab active" onclick="nmapTab('table',this)">📋 Port Table</button>
+          <button class="nmap-tab" onclick="nmapTab('raw',this)">📄 Raw Output</button>
+        </div>
+        <div class="nmap-body">
+          <div id="nmap-table"></div>
+          <div id="nmap-raw" style="display:none"></div>
+        </div>
+      </div>
+      <div class="sec-title">⬡ OWASP TOP 10 — 2025 COVERAGE</div>
+      <div class="owasp-map"><div class="owasp-map-title">COVERAGE MAP</div><div class="owasp-grid" id="owasp-grid"></div></div>
+      <div class="sec-title">🛡️ VULNERABILITY FINDINGS</div>
+      <div class="vuln-summary" id="vuln-summary"></div>
+      <div class="filter-row">
+        <button class="fbtn active" onclick="applyFilter('ALL',this)">All</button>
+        <button class="fbtn" onclick="applyFilter('CRITICAL',this)">🔴 Critical</button>
+        <button class="fbtn" onclick="applyFilter('HIGH',this)">🟠 High</button>
+        <button class="fbtn" onclick="applyFilter('MEDIUM',this)">🟡 Medium</button>
+        <button class="fbtn" onclick="applyFilter('LOW',this)">🟢 Low</button>
+        <button class="fbtn" onclick="applyFilter('PASS',this)">✅ Pass</button>
+        <button class="fbtn" onclick="applyFilter('A01',this)">A01</button>
+        <button class="fbtn" onclick="applyFilter('A02',this)">A02</button>
+        <button class="fbtn" onclick="applyFilter('A03',this)">A03</button>
+        <button class="fbtn" onclick="applyFilter('A04',this)">A04</button>
+        <button class="fbtn" onclick="applyFilter('A05',this)">A05</button>
+        <button class="fbtn" onclick="applyFilter('A06',this)">A06</button>
+        <button class="fbtn" onclick="applyFilter('A07',this)">A07</button>
+        <button class="fbtn" onclick="applyFilter('A08',this)">A08</button>
+        <button class="fbtn" onclick="applyFilter('A09',this)">A09</button>
+        <button class="fbtn" onclick="applyFilter('A10',this)">A10</button>
+      </div>
+      <div class="vlist" id="vuln-list"></div>
+      <div class="act-row">
+        <button class="act-btn" onclick="exportReport()" style="background:linear-gradient(135deg,var(--cyan),#005fcc)">💾 Export Full Report</button>
+        <button class="act-btn" onclick="clearAll()" style="background:linear-gradient(135deg,var(--red),#990033)">🗑️ Clear</button>
+      </div>
+    </div>
+  </div>
+  <!-- ABOUT -->
+  <div id="page-about" class="page">
+    <div class="sec-title">⬡ OWASP TOP 10 — 2025 CHECKS</div>
+    <div class="feat-grid">
+      <div class="fcard"><div class="fcard-badge">A01:2025</div><div class="fcard-ico">🔓</div><div class="fcard-name">Broken Access Control</div><div class="fcard-desc">Admin path access, directory listing, unauthenticated APIs, IDOR probing, HTTP verb tampering, CSRF token detection.</div></div>
+      <div class="fcard"><div class="fcard-badge">A02:2025</div><div class="fcard-ico">🔐</div><div class="fcard-name">Cryptographic Failures</div><div class="fcard-desc">SSL/TLS cert expiry, deprecated protocols (SSLv3/TLS1.0/1.1), weak ciphers, HTTP→HTTPS redirect, insecure cookies, sensitive data in URLs.</div></div>
+      <div class="fcard"><div class="fcard-badge">A03:2025</div><div class="fcard-ico">💉</div><div class="fcard-name">Injection</div><div class="fcard-desc">SQL Injection (GET+POST), Reflected XSS, SSTI, Command Injection, NoSQL Injection, LDAP Injection.</div></div>
+      <div class="fcard"><div class="fcard-badge">A04:2025</div><div class="fcard-ico">🏗️</div><div class="fcard-name">Insecure Design</div><div class="fcard-desc">Stack trace exposure, debug mode detection, missing rate-limit headers, account enumeration via login responses.</div></div>
+      <div class="fcard"><div class="fcard-badge">A05:2025</div><div class="fcard-ico">⚙️</div><div class="fcard-name">Security Misconfiguration</div><div class="fcard-desc">HSTS/CSP/X-Frame-Options, server disclosure, CORS misconfiguration, TRACE method, OPTIONS verb, 24+ sensitive file paths.</div></div>
+      <div class="fcard"><div class="fcard-badge">A06:2025</div><div class="fcard-ico">📦</div><div class="fcard-name">Vulnerable Components</div><div class="fcard-desc">CVE banner matching (Apache/nginx/PHP/IIS/Tomcat/OpenSSL), jQuery/Angular/Bootstrap versions, CMS detection, package files exposed.</div></div>
+      <div class="fcard"><div class="fcard-badge">A07:2025</div><div class="fcard-ico">🔑</div><div class="fcard-name">Auth & ID Failures</div><div class="fcard-desc">Default credential testing, insecure cookie flags (Secure/HttpOnly/SameSite), weak session token length, auth tokens in URLs.</div></div>
+      <div class="fcard"><div class="fcard-badge">A08:2025</div><div class="fcard-ico">🧩</div><div class="fcard-name">Software Integrity Failures</div><div class="fcard-desc">External scripts without SRI, deserialization indicators, exposed CI/CD files (Dockerfile, Jenkinsfile, .travis.yml).</div></div>
+      <div class="fcard"><div class="fcard-badge">A09:2025</div><div class="fcard-ico">📋</div><div class="fcard-name">Logging & Monitoring</div><div class="fcard-desc">security.txt presence, exposed log files (app.log, error.log, access.log, debug.log) accessible publicly.</div></div>
+      <div class="fcard"><div class="fcard-badge">A10:2025</div><div class="fcard-ico">🔄</div><div class="fcard-name">SSRF</div><div class="fcard-desc">SSRF via URL params (AWS/GCP metadata), Open Redirect, Path Traversal (../../../../etc/passwd + encoded), XXE via XML endpoints.</div></div>
+      <div class="fcard"><div class="fcard-badge">NMAP</div><div class="fcard-ico">🔌</div><div class="fcard-name">Nmap Port Scanner</div><div class="fcard-desc">Full -sV -T4 --open scan. Service & version detection. Port Table + Raw Output tabs. Configurable port range. Clear error messages with fix instructions.</div></div>
+    </div>
+  </div>
+  <!-- DEV -->
+  <div id="page-developer" class="page">
+    <div class="sec-title">👨‍💻 DEVELOPER</div>
+    <div class="dev-card">
+      <div style="font-size:3.8rem;margin-bottom:14px">👨‍💻</div>
+      <div class="dev-name">KAVI &amp; MOKSH</div>
+      <div class="dev-role">CYBER SECURITY STUDENTS</div>
+      <div class="dev-div"></div>
+      <div class="dev-contact">
+        📧 <a href="/cdn-cgi/l/email-protection#9bcbdacfded7d0dacdd2abadabdbdcd6dad2d7b5d8d4d6"><span class="__cf_email__" data-cfemail="b8e8f9ecfdf4f3f9eef1888e88f8fff5f9f1f496fbf7f5">[email&#160;protected]</span></a><br/>
+        📧 <a href="/cdn-cgi/l/email-protection#f7a7bab8bca4bfc6cfc2c7b7b0bab6bebbd9b4b8ba"><span class="__cf_email__" data-cfemail="03534e4c48504b323b363343444e424a4f2d404c4e">[email&#160;protected]</span></a>
+      </div>
+      <div class="dev-div"></div>
+      <div style="font-family:var(--mono);font-size:.75rem;color:var(--muted);line-height:1.9">
+        CyberRecon Framework v5.0<br/>OWASP Top 10 (2025) · Nmap · Auth<br/>
+        <span style="color:var(--cyan)">© 2025 — Authorized ethical testing only.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+const OWASP={A01:"Broken Access Control",A02:"Cryptographic Failures",A03:"Injection",A04:"Insecure Design",
+  A05:"Security Misconfig",A06:"Vulnerable Components",A07:"Auth & ID Failures",
+  A08:"Software Integrity",A09:"Logging Failures",A10:"SSRF"};
+const SEV_ORDER={CRITICAL:0,HIGH:1,MEDIUM:2,LOW:3,PASS:4,INFO:5};
+const SEV_ICON={CRITICAL:"🔴",HIGH:"🟠",MEDIUM:"🟡",LOW:"🟢",PASS:"✅",INFO:"🔵"};
+const PHASES=["Resolving hostname…","Fetching HTTP headers…","Running DNS lookup…","Querying IP geolocation…",
+  "Testing A01: Access Control…","Testing A02: Cryptographic Failures…","Testing A03: Injection (SQLi/XSS/SSTI)…",
+  "Testing A04: Insecure Design…","Testing A05: Security Misconfiguration…","Testing A06: Vulnerable Components…",
+  "Testing A07: Auth Failures…","Testing A08: Software Integrity…","Testing A09: Logging Failures…",
+  "Testing A10: SSRF / XXE / Path Traversal…","Probing sensitive file paths…","Running Nmap port scan…","Compiling OWASP 2025 report…"];
+let currentUser=null,lastData=null,allVulns=[];
+(async()=>{try{const r=await fetch('/api/me');const d=await r.json();if(d.logged_in){currentUser=d;showApp();}}catch(e){}})();
+function switchTab(t){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',(i===0&&t==='login')||(i===1&&t==='signup')));
+  document.getElementById('login-form').style.display=t==='login'?'block':'none';
+  document.getElementById('signup-form').style.display=t==='signup'?'block':'none';
+}
+function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),4000);}
+async function doLogin(){
+  const u=document.getElementById('login-user').value.trim(),p=document.getElementById('login-pass').value;
+  if(!u||!p)return showErr('login-err','All fields required');
+  try{const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const d=await r.json();if(!r.ok)return showErr('login-err',d.error||'Login failed');
+    const me=await(await fetch('/api/me')).json();currentUser=me;showApp();
+  }catch(e){showErr('login-err','Connection error');}
+}
+async function doSignup(){
+  const u=document.getElementById('signup-user').value.trim(),e=document.getElementById('signup-email').value.trim(),p=document.getElementById('signup-pass').value;
+  if(!u||!e||!p)return showErr('signup-err','All fields required');
+  try{const r=await fetch('/api/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,email:e,password:p})});
+    const d=await r.json();if(!r.ok)return showErr('signup-err',d.error||'Signup failed');
+    currentUser={username:d.username,scans:0};showApp();
+  }catch(e){showErr('signup-err','Connection error');}
+}
+async function doLogout(){await fetch('/api/logout',{method:'POST'});currentUser=null;document.getElementById('app').classList.remove('visible');document.getElementById('auth-screen').style.display='flex';}
+function showApp(){document.getElementById('auth-screen').style.display='none';document.getElementById('app').classList.add('visible');document.getElementById('nav-user').textContent='● '+(currentUser?.username||'');updateCount();}
+function updateCount(){if(currentUser?.scans!==undefined)document.getElementById('nav-scans').textContent=`[${currentUser.scans} scan${currentUser.scans!==1?'s':''}]`;}
+function showPage(n,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));document.getElementById('page-'+n).classList.add('active');if(btn)btn.classList.add('active');}
+async function startScan(){
+  const target=document.getElementById('target-input').value.trim();
+  const ports=document.getElementById('port-input').value.trim()||'1-1024';
+  if(!target)return;
+  document.getElementById('go-btn').disabled=true;document.getElementById('go-btn').textContent='⏳ SCANNING…';
+  document.getElementById('prog').classList.add('on');document.getElementById('empty-state').style.display='none';document.getElementById('results-area').style.display='none';
+  let pi=0;const statusEl=document.getElementById('status-log');statusEl.textContent=PHASES[0];
+  const ticker=setInterval(()=>{pi=(pi+1)%PHASES.length;statusEl.textContent='› '+PHASES[pi];},1500);
+  try{
+    const r=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target,ports})});
+    const d=await r.json();clearInterval(ticker);
+    if(!r.ok||d.error){statusEl.textContent='✗ Error: '+(d.error||'Scan failed');document.getElementById('empty-state').style.display='block';}
+    else{statusEl.textContent='✓ Complete — '+d.timestamp;lastData=d;if(currentUser){currentUser.scans=(currentUser.scans||0)+1;updateCount();}renderAll(d);}
+  }catch(e){clearInterval(ticker);statusEl.textContent='✗ Network error: '+e.message;document.getElementById('empty-state').style.display='block';}
+  finally{document.getElementById('go-btn').disabled=false;document.getElementById('go-btn').textContent='▶ SCAN';document.getElementById('prog').classList.remove('on');}
+}
+function renderAll(d){
+  const res=d.results;
+  document.getElementById('r-http').textContent=res.recon.join('\n')||'—';
+  document.getElementById('r-dns').textContent=res.dns.join('\n')||'—';
+  document.getElementById('r-ip').textContent=res.ip_info.join('\n')||'—';
+  document.getElementById('r-meta').textContent=`Target    : ${d.target}\nTimestamp : ${d.timestamp}\nUser      : ${currentUser?.username||'?'}\nCritical  : ${res.summary.CRITICAL||0}   High   : ${res.summary.HIGH||0}\nMedium    : ${res.summary.MEDIUM||0}   Low    : ${res.summary.LOW||0}\nPass      : ${res.summary.PASS||0}`;
+  renderNmap(res.nmap||{});
+  // OWASP grid
+  const grid=document.getElementById('owasp-grid');grid.innerHTML='';
+  const cov=res.owasp_coverage||{};
+  Object.entries(OWASP).forEach(([id,name])=>{
+    const n=cov[id]||0;const cell=document.createElement('div');
+    cell.className='ocell '+(n>0?'vuln':'clean');cell.title=n>0?`${n} finding(s)`:'Clean';
+    cell.innerHTML=`<div class="ocell-id">${id}:2025</div><div class="ocell-name">${name}</div><div class="ocell-count">${n>0?n+'⚠':'✓'}</div>`;
+    grid.appendChild(cell);
+  });
+  // Vuln badges
+  const sumEl=document.getElementById('vuln-summary');sumEl.innerHTML='';
+  [['CRITICAL',res.summary.CRITICAL||0,'c'],['HIGH',res.summary.HIGH||0,'h'],['MEDIUM',res.summary.MEDIUM||0,'m'],['LOW',res.summary.LOW||0,'l'],['PASS',res.summary.PASS||0,'p']].forEach(([l,c,cl])=>{
+    const b=document.createElement('div');b.className='vbadge '+cl;b.innerHTML=`<strong>${c}</strong> ${l}`;sumEl.appendChild(b);
+  });
+  allVulns=[...(res.vulnerabilities||[])].sort((a,b)=>(SEV_ORDER[a.severity]||5)-(SEV_ORDER[b.severity]||5));
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.fbtn').classList.add('active');
+  renderVulns(allVulns);
+  document.getElementById('results-area').style.display='block';
+  document.getElementById('results-area').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function renderNmap(nm){
+  const badge=document.getElementById('nmap-badge'),summ=document.getElementById('nmap-summ');
+  const tableDiv=document.getElementById('nmap-table'),rawDiv=document.getElementById('nmap-raw');
+  rawDiv.innerHTML=`<div class="nmap-raw">${esc((nm.raw_lines||[]).join('\n'))}</div>`;
+  if(!nm.available){
+    badge.className='nmap-badge warn';badge.textContent='NOT INSTALLED';
+    summ.textContent='Install nmap binary + python-nmap to enable port scanning';
+    tableDiv.innerHTML=`<div style="font-family:var(--mono);font-size:.78rem;color:var(--yellow);padding:8px 0">
+      ⚠️ <b>python-nmap not installed.</b><br/><br/>
+      Step 1 — Install Python library:<br/>
+      &nbsp;&nbsp;<span style="color:var(--cyan)">pip install python-nmap</span><br/><br/>
+      Step 2 — Install nmap binary:<br/>
+      &nbsp;&nbsp;Windows: <a href="https://nmap.org/download.html" style="color:var(--cyan)">nmap.org/download.html</a><br/>
+      &nbsp;&nbsp;Linux: <span style="color:var(--cyan)">sudo apt install nmap</span><br/>
+      &nbsp;&nbsp;macOS: <span style="color:var(--cyan)">brew install nmap</span>
+    </div>`;return;
+  }
+  if(nm.error&&(!nm.hosts||!nm.hosts.length)){
+    badge.className='nmap-badge err';badge.textContent='ERROR';summ.textContent=nm.error;
+    tableDiv.innerHTML=`<div style="font-family:var(--mono);font-size:.75rem;color:var(--red);padding:8px 0">
+      <b>Error:</b> ${esc(nm.error)}<br/><br/>
+      Common fixes:<br/>
+      • Windows — run as Administrator<br/>
+      • Linux/Mac — run with <span style="color:var(--cyan)">sudo python app.py</span><br/>
+      • Check Raw Output tab for full error details.
+    </div>`;return;
+  }
+  let total=0,hosts=nm.hosts?nm.hosts.length:0;
+  (nm.hosts||[]).forEach(h=>total+=(h.ports||[]).length);
+  badge.className='nmap-badge ok';badge.textContent='SCAN COMPLETE';
+  summ.textContent=`${hosts} host(s) · ${total} open port(s)`;
+  if(!nm.hosts||!nm.hosts.length){
+    tableDiv.innerHTML=`<div style="font-family:var(--mono);font-size:.75rem;color:var(--muted);padding:8px 0">No open ports found. Target may be down or filtering. Check Raw Output tab.</div>`;return;
+  }
+  let html='';
+  nm.hosts.forEach(host=>{
+    html+=`<div style="margin-bottom:20px">
+      <div style="font-family:var(--mono);font-size:.78rem;margin-bottom:8px">
+        <span style="color:var(--cyan)">Host:</span> <span style="color:var(--text)">${esc(host.ip)}</span>
+        ${host.hostname&&host.hostname!==host.ip?`<span style="color:var(--muted)"> (${esc(host.hostname)})</span>`:''}
+        <span style="margin-left:10px;padding:2px 8px;border-radius:4px;font-size:.63rem;background:rgba(0,255,157,.1);border:1px solid rgba(0,255,157,.3);color:var(--green)">${esc(host.state||'up')}</span>
+      </div>`;
+    if(!host.ports||!host.ports.length){html+=`<div style="font-family:var(--mono);font-size:.72rem;color:var(--muted)">No open ports in scanned range.</div>`;}
+    else{
+      html+=`<table class="port-table"><thead><tr><th>PORT</th><th>PROTO</th><th>STATE</th><th>SERVICE</th><th>VERSION / PRODUCT</th></tr></thead><tbody>`;
+      host.ports.forEach((p,i)=>{
+        const sc=p.state==='open'?'p-open':p.state==='closed'?'p-closed':'p-filtered';
+        const ver=p.version_str?esc(p.version_str):p.product?esc(p.product):'';
+        html+=`<tr style="animation-delay:${i*0.03}s"><td class="p-num">${p.port}</td><td style="color:var(--muted)">${esc(p.proto||'tcp')}</td><td class="${sc}">${esc(p.state||'?')}</td><td style="color:var(--text)">${esc(p.service||'unknown')}</td><td style="font-size:.72rem;color:var(--text)">${ver||'—'}</td></tr>`;
+      });
+      html+=`</tbody></table>`;
+    }
+    html+=`</div>`;
+  });
+  tableDiv.innerHTML=html;
+}
+function nmapTab(w,btn){
+  document.querySelectorAll('.nmap-tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');
+  document.getElementById('nmap-table').style.display=w==='table'?'block':'none';
+  document.getElementById('nmap-raw').style.display=w==='raw'?'block':'none';
+}
+function renderVulns(vulns){
+  const el=document.getElementById('vuln-list');el.innerHTML='';
+  if(!vulns.length){el.innerHTML=`<div class="empty"><div class="empty-ico">🔍</div><div class="empty-txt">No findings match this filter.</div></div>`;return;}
+  vulns.forEach((v,i)=>{
+    const item=document.createElement('div');item.className='vitem '+v.severity;item.style.animationDelay=(i*0.03)+'s';
+    const icon=SEV_ICON[v.severity]||'●';
+    const otag=v.owasp?`<span class="otag">${v.owasp}:2025</span>`:'';
+    item.innerHTML=v.severity==='PASS'
+      ?`<span class="vtag PASS">✓ PASS</span>${otag}<div><div class="vtitle">${esc(v.title)}</div></div>`
+      :`<span class="vtag ${v.severity}">${icon} ${v.severity}</span>${otag}<div><div class="vtitle">${esc(v.title)}</div>${v.detail?`<div class="vdetail">${esc(v.detail)}</div>`:''}</div>`;
+    el.appendChild(item);
+  });
+}
+function applyFilter(f,btn){
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');
+  const SEVS=['CRITICAL','HIGH','MEDIUM','LOW','PASS','INFO'];
+  renderVulns(f==='ALL'?allVulns:SEVS.includes(f)?allVulns.filter(v=>v.severity===f):allVulns.filter(v=>v.owasp===f));
+}
+function clearAll(){lastData=null;allVulns=[];document.getElementById('results-area').style.display='none';document.getElementById('empty-state').style.display='block';document.getElementById('target-input').value='';document.getElementById('status-log').textContent='';}
+function exportReport(){
+  if(!lastData)return;
+  const d=lastData,res=d.results;
+  const sc={CRITICAL:'#ff2d5e',HIGH:'#ff8c00',MEDIUM:'#ffd700',LOW:'#00ff9d',PASS:'#00e5ff'};
+  const owaspRows=Object.entries(OWASP).map(([id,name])=>{const n=(res.owasp_coverage||{})[id]||0;return `<tr><td style="color:#00e5ff;font-weight:700">${id}:2025</td><td>${name}</td><td style="color:${n>0?'#ff2d5e':'#00ff9d'};font-weight:700">${n>0?n+' finding(s)':'✓ Clean'}</td></tr>`;}).join('');
+  let nmapHtml='<p style="color:#4a6080;font-size:12px">Nmap not available or no results.</p>';
+  const nm=res.nmap||{};
+  if(nm.hosts&&nm.hosts.length>0){
+    nmapHtml='';
+    nm.hosts.forEach(host=>{
+      nmapHtml+=`<h3 style="color:#00ff9d;margin:16px 0 8px">${host.ip} (${host.hostname}) — ${host.state}</h3>`;
+      if(host.ports&&host.ports.length>0){
+        nmapHtml+=`<table><thead><tr><th>PORT</th><th>PROTO</th><th>STATE</th><th>SERVICE</th><th>VERSION</th></tr></thead><tbody>`;
+        host.ports.forEach(p=>{nmapHtml+=`<tr><td style="color:#00e5ff">${p.port}</td><td>${p.proto||'tcp'}</td><td style="color:${p.state==='open'?'#00ff9d':'#ff2d5e'};font-weight:700">${p.state}</td><td>${p.service||'?'}</td><td>${p.version_str||p.product||'—'}</td></tr>`;});
+        nmapHtml+=`</tbody></table>`;
+      }
+    });
+  }else if(nm.raw_lines&&nm.raw_lines.length>0){
+    nmapHtml=`<pre style="background:#0a1228;padding:12px;font-size:11px;color:#4a6080">${nm.raw_lines.join('\n')}</pre>`;
+  }
+  const vulnRows=allVulns.map(v=>`<tr style="border-left:3px solid ${sc[v.severity]||'#fff'}"><td style="color:${sc[v.severity]};font-weight:700;white-space:nowrap">${v.severity}</td><td style="color:#c800ff;font-size:11px">${v.owasp?v.owasp+':2025':''}</td><td>${v.title}</td><td style="color:#6a8090;font-size:11px">${v.detail||''}</td></tr>`).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>CyberRecon OWASP 2025 — ${d.target}</title>
+<style>body{background:#020510;color:#d0dff0;font-family:'Courier New',monospace;padding:30px;margin:0}
+h1{color:#00e5ff;letter-spacing:4px;border-bottom:2px solid #00e5ff;padding-bottom:12px}h2{color:#00ff9d;margin-top:28px;letter-spacing:2px;font-size:14px}h3{color:#00ff9d;font-size:13px}
+pre{background:#0a1228;padding:14px;border-radius:6px;font-size:11px;overflow:auto;white-space:pre-wrap}
+table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#0a1228;color:#00e5ff;padding:9px 13px;text-align:left;font-size:11px;letter-spacing:1.5px}
+td{padding:9px 13px;border-bottom:1px solid #1a2a50;font-size:12px;vertical-align:top}
+.meta{color:#4a6080;font-size:12px;margin:5px 0}.sum{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+.sb{padding:6px 14px;border-radius:6px;font-weight:700;font-size:12px}</style></head><body>
+<h1>⬡ CYBERRECON — OWASP 2025 FULL REPORT</h1>
+<div class="meta">Target: <b>${d.target}</b> | ${d.timestamp} | User: ${currentUser?.username||'?'}</div>
+<div class="sum">
+<span class="sb" style="background:rgba(255,45,94,.15);color:#ff2d5e">🔴 Critical: ${res.summary.CRITICAL||0}</span>
+<span class="sb" style="background:rgba(255,140,0,.12);color:#ff8c00">🟠 High: ${res.summary.HIGH||0}</span>
+<span class="sb" style="background:rgba(255,215,0,.1);color:#ffd700">🟡 Medium: ${res.summary.MEDIUM||0}</span>
+<span class="sb" style="background:rgba(0,255,157,.08);color:#00ff9d">🟢 Low: ${res.summary.LOW||0}</span>
+<span class="sb" style="background:rgba(0,229,255,.08);color:#00e5ff">✅ Pass: ${res.summary.PASS||0}</span>
+</div>
+<h2>📡 HTTP HEADERS</h2><pre>${res.recon.join('\n')}</pre>
+<h2>🔗 DNS</h2><pre>${res.dns.join('\n')}</pre>
+<h2>📍 IP INTELLIGENCE</h2><pre>${res.ip_info.join('\n')}</pre>
+<h2>🔌 NMAP PORT SCAN</h2>${nmapHtml}
+<h2>⬡ OWASP TOP 10 — 2025 COVERAGE</h2>
+<table><thead><tr><th>ID</th><th>CATEGORY</th><th>STATUS</th></tr></thead><tbody>${owaspRows}</tbody></table>
+<h2>🛡️ ALL VULNERABILITY FINDINGS</h2>
+<table><thead><tr><th>SEVERITY</th><th>OWASP</th><th>FINDING</th><th>DETAIL</th></tr></thead><tbody>${vulnRows}</tbody></table>
+</body></html>`;
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+  a.download=`cyberrecon-owasp2025-${d.target.replace(/[^a-z0-9]/gi,'_')}-${Date.now()}.
