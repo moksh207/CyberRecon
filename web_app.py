@@ -163,8 +163,7 @@ with st.sidebar:
             "🗺️ Network / Nmap Scanner",
             "🌐 IP Intelligence",
             "📊 Reports & Export",
-            "ℹ️ About",
-            "👨‍💻 Developer Info"
+            "ℹ️ About"
         ],
         index=0
     )
@@ -791,29 +790,3 @@ To deploy this application to Streamlit Community Cloud and showcase it on your 
 ### ⚖️ Legal Disclaimer
 *This tool is intended strictly for authorized security auditing, educational research, and defensive assessment of systems you own or have explicit written permission to test. Unauthorized port scanning or vulnerability probing of third-party networks may violate applicable local and international computer crime legislation.*
 """)
-
-
-# ─────────────────────────────────────────────────────────────
-# View 7: Developer Information
-# ─────────────────────────────────────────────────────────────
-
-elif nav_choice == "👨‍💻 Developer Info":
-    st.title("👨‍💻 Developer Info")
-
-    st.markdown('<div class="cyber-card">', unsafe_allow_html=True)
-    st.markdown("## 🛡️ KAVI & MOKSH")
-    st.markdown("##### CYBER SECURITY RESEARCHERS & STUDENTS")
-    st.markdown("---")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("#### 📧 Contact Information")
-        st.markdown("- **Email 1:** [PATELKAVI060@GMAIL.COM](mailto:PATELKAVI060@GMAIL.COM)")
-        st.markdown("- **Email 2:** [PMOKSH1850@GMAIL.COM](mailto:PMOKSH1850@GMAIL.COM)")
-
-    with col2:
-        st.markdown("#### 🔗 Profiles & Projects")
-        st.markdown("- **GitHub:** [github.com](https://github.com)")
-        st.markdown("- **Project:** CyberRecon v5.0 Security Suite")
-
-    st.markdown('</div>', unsafe_allow_html=True)

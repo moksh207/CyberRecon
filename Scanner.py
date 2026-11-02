@@ -138,7 +138,6 @@ class App(tk.Tk):
         self._p_intel(c)
         self._p_reports(c)
         self._p_about(c)
-        self._p_dev(c)
         self._show("Scanner")
 
     def _sidebar(self, parent):
@@ -152,8 +151,7 @@ class App(tk.Tk):
             ("🗺️ Network/Nmap", "Network"),
             ("🌐 Intelligence", "Intel"),
             ("📊 Reports", "Reports"),
-            ("ℹ️ About", "About"),
-            ("👨‍💻 Developer", "Dev")
+            ("ℹ️ About", "About")
         ]
         for lbl, sec in nav:
             fg = C['red'] if sec == "OWASP" else C['text']
@@ -383,33 +381,8 @@ INSTALL:
   pip install requests python-whois python-nmap urllib3
   nmap binary: https://nmap.org/download.html
 
-DISCLAIMER: For authorized testing only. © 2025 KAVI & MOKSH""")
+DISCLAIMER: For authorized testing only.""")
         at.config(state='disabled')
-
-    def _p_dev(self, c):
-        p = tk.Frame(c, bg=C['bg_dark'])
-        self.pnl["Dev"] = p
-        tk.Label(p, text="👨‍💻 Developer Info", font=('Segoe UI', 15, 'bold'), bg=C['bg_dark'], fg=C['text']).pack(anchor='w', pady=(0, 14))
-        card = tk.Frame(p, bg=C['bg_panel'])
-        card.pack(fill='x')
-        pf = tk.Frame(card, bg=C['bg_panel'])
-        pf.pack(fill='x', padx=26, pady=26)
-        tk.Label(pf, text="👨‍💻", font=('Segoe UI', 40), bg=C['bg_panel'], fg=C['cyan']).pack(pady=(0, 10))
-        tk.Label(pf, text="KAVI AND MOKSH", font=('Segoe UI', 17, 'bold'), bg=C['bg_panel'], fg=C['text']).pack()
-        tk.Label(pf, text="CYBER SECURITY STUDENTS", font=('Segoe UI', 10), bg=C['bg_panel'], fg=C['muted']).pack(pady=(4, 16))
-        tk.Frame(card, bg=C['border'], height=1).pack(fill='x', padx=26)
-        cf = tk.Frame(card, bg=C['bg_panel'])
-        cf.pack(fill='x', padx=26, pady=16)
-        tk.Label(cf, text="📧 Contact:", font=('Segoe UI', 11, 'bold'), bg=C['bg_panel'], fg=C['cyan']).pack(anchor='w', pady=(0, 8))
-        for em in ["PATELKAVI060@GMAIL.COM", "PMOKSH1850@GMAIL.COM"]:
-            r = tk.Frame(cf, bg=C['bg_panel'])
-            r.pack(fill='x', pady=2)
-            tk.Label(r, text="Email:", font=('Segoe UI', 9), bg=C['bg_panel'], fg=C['muted'], width=8, anchor='w').pack(side='left')
-            tk.Label(r, text=em, font=('Segoe UI', 9), bg=C['bg_panel'], fg=C['text']).pack(side='left')
-        br = tk.Frame(card, bg=C['bg_panel'])
-        br.pack(fill='x', padx=26, pady=(0, 18))
-        FlatBtn(br, "📧 Email", cmd=lambda: webbrowser.open('mailto:PATELKAVI060@GMAIL.COM'), bg='cyan').pack(side='left', padx=(0, 7))
-        FlatBtn(br, "🐙 GitHub", cmd=lambda: webbrowser.open('https://github.com'), bg='green').pack(side='left')
 
     def log(self, prefix, text, color):
         self.con.write(prefix, text, color)
